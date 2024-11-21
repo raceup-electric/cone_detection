@@ -1,2 +1,4 @@
 # cone_detection
-Perception module
+Perception module for LiDAR pointclouds
+LiDAR: Ouster OS1
+
