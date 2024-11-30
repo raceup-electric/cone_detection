@@ -18,11 +18,22 @@
 #include <Eigen/Dense>  // For centroid calculation
 #include <pcl/filters/voxel_grid.h>
 
+#include <pcl/filters/passthrough.h>
+
 void filterAboveHeight(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                            pcl::PointCloud<pcl::PointXYZI>& output_cloud,
                            float max_height);
 
-    void filterDistantPoints(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
-                             pcl::PointCloud<pcl::PointXYZI>& output_cloud,
-                             float max_distance); 
+void filterDistantPoints(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
+                            pcl::PointCloud<pcl::PointXYZI>& output_cloud,
+                            float max_distance); 
+
+void coordinateBasedFiltering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
+                           pcl::PointCloud<pcl::PointXYZI>& output_cloud,
+                           float max_height, float max_distance);
+
+void restrictedFOVFiltering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
+                            pcl::PointCloud<pcl::PointXYZI>& output_cloud,
+                            float max_height);
+                    
 #endif  

@@ -4,7 +4,7 @@
 const float EPS = 0.5;                       // Cluster tolerance (distance)
 
 const int MIN_CLUSTER_SIZE = 20;  // Minimum number of points for a cluster to be considered valid
-const int MAX_CLUSTER_SIZE = 200; // Maximum number of points for a cluster to be considered valid
+const int MAX_CLUSTER_SIZE = 2000; // Maximum number of points for a cluster to be considered valid
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                              std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points) {

@@ -28,6 +28,7 @@ const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  // Maximum all
 const float DISTANCE_RADIUS_THRESHOLD = 10.0;       // Distance threshold for filtering
 
 const int MIN_POINTS = 10;                   // Minimum points per cluster
+const int MAX_POINTS = 200;
 
 // Cone size constraints for RVIZ2 Markers
 const float MARKER_SMALL_CONE_HEIGHT = 0.3;
@@ -45,47 +46,62 @@ public:
         cone_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/detected_cones", 10);
 
         marker_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/cone_markers", 10);
+        marker_pub = this->create_publisher<visualization_msgs::msg::Marker>("/cone_marker", 10);
+
+
+        restricted_fov_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/restricted_fov", 10);
+
     }
 
 private:
 
-    /*********************************************************************************************************/
-    /*********************************************************************************************************/
-    /*                                   ROS2 CALLBACK FOR LIDAR DATA                                        */
-    /*********************************************************************************************************/
-    /*********************************************************************************************************/
+    //*********************************************************************************************************
+    //*********************************************************************************************************
+    //*                                   ROS2 CALLBACK FOR LIDAR DATA                                        *
+    //*********************************************************************************************************
+    //********************************************************************************************************
 
     void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
         // Convert PointCloud2 to PCL PointCloud<PointXYZI> for processing
         pcl::PointCloud<pcl::PointXYZI> pcl_cloud;
         pcl::fromROSMsg(*msg, pcl_cloud);
 
-        // Filter out points that are too high
-        pcl::PointCloud<pcl::PointXYZI> height_filtered_cloud;
-        filterAboveHeight(pcl_cloud, height_filtered_cloud, MAX_HEIGHT_THRESHOLD);
+        //Filter out points based on their coordinates
+        pcl::PointCloud<pcl::PointXYZI> filtered_cloud;
+        restrictedFOVFiltering(pcl_cloud, filtered_cloud, MAX_HEIGHT_THRESHOLD);
+
+        // PUBLISH THE RESTRICTED FOV
+        //sensor_msgs::msg::PointCloud2 restricted_fov_msg;
+        //pcl::toROSMsg(filtered_cloud, restricted_fov_msg);
+        //restricted_fov_msg.header = msg->header;
+        //restricted_fov_publisher_->publish(restricted_fov_msg);
+
 
         // Separate ground and non-ground points using RANSAC
         pcl::PointCloud<pcl::PointXYZI> ground_removed_cloud;
-        pcl::PointCloud<pcl::PointXYZI> ground_cloud;
-        removeGroundRANSAC(height_filtered_cloud, ground_removed_cloud, ground_cloud);
+        removeGroundRANSAC(filtered_cloud, ground_removed_cloud);
 
-        // Filter out distant points
-        pcl::PointCloud<pcl::PointXYZI> distance_filtered_cloud;
-        filterDistantPoints(ground_removed_cloud, distance_filtered_cloud, DISTANCE_RADIUS_THRESHOLD);
+        //TODO: Eliminate
+        sensor_msgs::msg::PointCloud2 restricted_fov_msg;
+        pcl::toROSMsg(ground_removed_cloud, restricted_fov_msg);
+        restricted_fov_publisher_->publish(restricted_fov_msg);
+
 
         // Cluster the remaining points
         std::vector<pcl::PointCloud<pcl::PointXYZI>> cone_clusters;
-        performDBSCANClustering(distance_filtered_cloud, cone_clusters, MIN_POINTS);
+        performDBSCANClustering(ground_removed_cloud, cone_clusters, MIN_POINTS);
 
         // Classify clusters and store classified cones
         std::vector<pcl::PointCloud<pcl::PointXYZI>> classified_cones;
         for (auto& cluster : cone_clusters) {
-            if (cluster.points.size() >= MIN_POINTS && cluster.points.size() <= 25000) {
+            if (cluster.points.size() >= MIN_POINTS && cluster.points.size() <= MAX_POINTS) {
                 // Only keep clusters within point count range
                 cone_detection::ConeType cone_type = classifyCone(cluster);
-                if (cone_type != cone_detection::ConeType::UNKNOWN) {
-                    classified_cones.push_back(cluster);  // Only store recognized cones
-                }
+                
+                //if (cone_type != cone_detection::ConeType::UNKNOWN) {
+                //    classified_cones.push_back(cluster);  // Only store recognized cones
+                //}
+                classified_cones.push_back(cluster);
             }
         }
 
@@ -94,13 +110,16 @@ private:
 
         // Publish markers for each classified cone
         publishConeMarkers(classified_cones, msg->header);
+
+
+        //publishMarker(classified_cones, msg->header);
     }
 
-    /*********************************************************************************************************/
-    /*********************************************************************************************************/
-    /*                                        PUBLISHING METHODS                                             */
-    /*********************************************************************************************************/
-    /*********************************************************************************************************/
+    //********************************************************************************************************
+    //********************************************************************************************************
+    //*                                        PUBLISHING METHODS                                             
+    //********************************************************************************************************
+    //********************************************************************************************************
 
 
     void publishConePointCloud(const std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters,
@@ -184,12 +203,99 @@ private:
             marker_array.markers.push_back(marker);
         }
 
+        // Clear previous markers
+        visualization_msgs::msg::Marker clear_marker;
+        clear_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+        marker_array.markers.insert(marker_array.markers.begin(), clear_marker);
+
         marker_publisher_->publish(marker_array);
     }
+
+
+    void publishMarker(const std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters,
+                        const std_msgs::msg::Header& header) {
+        visualization_msgs::msg::MarkerArray marker_array;
+
+        for (const auto& cluster : cone_clusters) {
+            if (cluster.points.empty()) continue;
+
+            Eigen::Vector4f centroid(0, 0, 0, 0);
+            for (const auto& point : cluster.points) {
+                centroid[0] += point.x;
+                centroid[1] += point.y;
+                centroid[2] += point.z;
+            }
+            centroid /= cluster.points.size();
+
+            cone_detection::ConeType cone_type = classifyCone(cluster);
+                
+            visualization_msgs::msg::Marker marker;
+            marker.header = header;
+            marker.ns = "cone_markers";
+            marker.id = marker_array.markers.size();  // Unique ID
+            marker.type = visualization_msgs::msg::Marker::CYLINDER;
+            marker.action = visualization_msgs::msg::Marker::ADD;
+            marker.pose.position.x = centroid[0];
+            marker.pose.position.y = centroid[1];
+            marker.pose.position.z = centroid[2];
+            
+            // Set dimensions and colors based on cone type
+            if (cone_type == cone_detection::ConeType::BIG_ORANGE) {
+                marker.scale.x = MARKER_BIG_CONE_RADIUS * 2;
+                marker.scale.y = MARKER_BIG_CONE_RADIUS * 2;
+                marker.scale.z = MARKER_BIG_CONE_HEIGHT;
+                marker.color.r = 1.0f;  // Orange
+                marker.color.g = 0.55f;
+                marker.color.b = 0.0f;
+            } else if (cone_type == cone_detection::ConeType::BLUE) {
+                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
+                marker.color.r = 0.0f;
+                marker.color.g = 0.0f;
+                marker.color.b = 1.0f;  // Blue
+            } else if (cone_type == cone_detection::ConeType::YELLOW) {
+                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
+                marker.color.r = 1.0f;
+                marker.color.g = 1.0f;
+                marker.color.b = 0.0f;  // Yellow
+            } else if (cone_type == cone_detection::ConeType::ORANGE) {
+                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
+                marker.color.r = 1.0f;  // Orange
+                marker.color.g = 0.55f;
+                marker.color.b = 0.0f;
+            } else {
+                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
+                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
+                marker.color.r = 0.5f;
+                marker.color.g = 0.5f;
+                marker.color.b = 0.5f;  // Unknown color (grey)
+            }
+            marker.color.a = 1.0; // Full opacity
+
+
+            marker_pub->publish(marker);
+        }
+    }
+
+
+
+
+
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscriber_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cone_publisher_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub;
+
+
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr restricted_fov_publisher_;
+
 };
 
 int main(int argc, char *argv[]) {

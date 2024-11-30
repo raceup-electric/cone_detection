@@ -18,7 +18,10 @@
 #include <Eigen/Dense>  // For centroid calculation
 #include <pcl/filters/voxel_grid.h>
 
+#include <pcl/segmentation/region_growing.h>
+
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                              std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points);
+        
 
 #endif  
