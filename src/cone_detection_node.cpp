@@ -21,11 +21,15 @@
 #include "cone_detection/ground_removal.hpp"
 #include "cone_detection/cone_clustering.hpp"
 
+#include <fstream>
+#include <time.h>
+
+
 
 const float LIDAR_HEIGHT = 0.6;
 const float HEIGHT_FILTER = 0.8;
 const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  // Maximum allowed height for all points (non-ground points)
-const float DISTANCE_RADIUS_THRESHOLD = 10.0;       // Distance threshold for filtering
+//const float DISTANCE_RADIUS_THRESHOLD = 20.0;       // Distance threshold for filtering
 
 const int MIN_POINTS = 10;                   // Minimum points per cluster
 const int MAX_POINTS = 200;
@@ -35,6 +39,8 @@ const float MARKER_SMALL_CONE_HEIGHT = 0.3;
 const float MARKER_SMALL_CONE_RADIUS = 0.2;
 const float MARKER_BIG_CONE_HEIGHT = 0.6;
 const float MARKER_BIG_CONE_RADIUS = 0.3;
+
+
 
 class ConeDetectionNode : public rclcpp::Node {
 public:
@@ -50,7 +56,6 @@ public:
 
 
         restricted_fov_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/restricted_fov", 10);
-
     }
 
 private:
@@ -62,6 +67,10 @@ private:
     //********************************************************************************************************
 
     void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+        
+        //Calculate the callback duration
+        rclcpp::Time first_time = rclcpp::Clock(RCL_STEADY_TIME).now();
+
         // Convert PointCloud2 to PCL PointCloud<PointXYZI> for processing
         pcl::PointCloud<pcl::PointXYZI> pcl_cloud;
         pcl::fromROSMsg(*msg, pcl_cloud);
@@ -71,10 +80,10 @@ private:
         restrictedFOVFiltering(pcl_cloud, filtered_cloud, MAX_HEIGHT_THRESHOLD);
 
         // PUBLISH THE RESTRICTED FOV
-        //sensor_msgs::msg::PointCloud2 restricted_fov_msg;
-        //pcl::toROSMsg(filtered_cloud, restricted_fov_msg);
-        //restricted_fov_msg.header = msg->header;
-        //restricted_fov_publisher_->publish(restricted_fov_msg);
+        sensor_msgs::msg::PointCloud2 restricted_fov_msg;
+        pcl::toROSMsg(filtered_cloud, restricted_fov_msg);
+        restricted_fov_msg.header = msg->header;
+        restricted_fov_publisher_->publish(restricted_fov_msg);
 
 
         // Separate ground and non-ground points using RANSAC
@@ -82,9 +91,9 @@ private:
         removeGroundRANSAC(filtered_cloud, ground_removed_cloud);
 
         //TODO: Eliminate
-        sensor_msgs::msg::PointCloud2 restricted_fov_msg;
+        /* sensor_msgs::msg::PointCloud2 restricted_fov_msg;
         pcl::toROSMsg(ground_removed_cloud, restricted_fov_msg);
-        restricted_fov_publisher_->publish(restricted_fov_msg);
+        restricted_fov_publisher_->publish(restricted_fov_msg); */
 
 
         // Cluster the remaining points
@@ -111,8 +120,12 @@ private:
         // Publish markers for each classified cone
         publishConeMarkers(classified_cones, msg->header);
 
-
         //publishMarker(classified_cones, msg->header);
+
+        //Calculate the callback duration
+        rclcpp::Time last_time = rclcpp::Clock(RCL_STEADY_TIME).now();
+        //calculateTime(first_time, last_time);
+
     }
 
     //********************************************************************************************************
@@ -198,7 +211,7 @@ private:
                 marker.color.g = 0.5f;
                 marker.color.b = 0.5f;  // Unknown color (grey)
             }
-            marker.color.a = 1.0; // Full opacity
+            marker.color.a = 0.4; // Opacity
 
             marker_array.markers.push_back(marker);
         }
@@ -209,84 +222,43 @@ private:
         marker_array.markers.insert(marker_array.markers.begin(), clear_marker);
 
         marker_publisher_->publish(marker_array);
+
+
+        //TODO: REMOVE
+        //rclcpp::Time timestamp_published = rclcpp::Clock(RCL_STEADY_TIME).now();
+
+
+        // Write timestamps to file using the message's timestamp as received time
+        //writeTimestampsToFile(rclcpp::Time(header.stamp), timestamp_published);
+
+        
     }
 
-
-    void publishMarker(const std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters,
-                        const std_msgs::msg::Header& header) {
-        visualization_msgs::msg::MarkerArray marker_array;
-
-        for (const auto& cluster : cone_clusters) {
-            if (cluster.points.empty()) continue;
-
-            Eigen::Vector4f centroid(0, 0, 0, 0);
-            for (const auto& point : cluster.points) {
-                centroid[0] += point.x;
-                centroid[1] += point.y;
-                centroid[2] += point.z;
-            }
-            centroid /= cluster.points.size();
-
-            cone_detection::ConeType cone_type = classifyCone(cluster);
-                
-            visualization_msgs::msg::Marker marker;
-            marker.header = header;
-            marker.ns = "cone_markers";
-            marker.id = marker_array.markers.size();  // Unique ID
-            marker.type = visualization_msgs::msg::Marker::CYLINDER;
-            marker.action = visualization_msgs::msg::Marker::ADD;
-            marker.pose.position.x = centroid[0];
-            marker.pose.position.y = centroid[1];
-            marker.pose.position.z = centroid[2];
-            
-            // Set dimensions and colors based on cone type
-            if (cone_type == cone_detection::ConeType::BIG_ORANGE) {
-                marker.scale.x = MARKER_BIG_CONE_RADIUS * 2;
-                marker.scale.y = MARKER_BIG_CONE_RADIUS * 2;
-                marker.scale.z = MARKER_BIG_CONE_HEIGHT;
-                marker.color.r = 1.0f;  // Orange
-                marker.color.g = 0.55f;
-                marker.color.b = 0.0f;
-            } else if (cone_type == cone_detection::ConeType::BLUE) {
-                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
-                marker.color.r = 0.0f;
-                marker.color.g = 0.0f;
-                marker.color.b = 1.0f;  // Blue
-            } else if (cone_type == cone_detection::ConeType::YELLOW) {
-                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
-                marker.color.r = 1.0f;
-                marker.color.g = 1.0f;
-                marker.color.b = 0.0f;  // Yellow
-            } else if (cone_type == cone_detection::ConeType::ORANGE) {
-                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
-                marker.color.r = 1.0f;  // Orange
-                marker.color.g = 0.55f;
-                marker.color.b = 0.0f;
-            } else {
-                marker.scale.x = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.y = MARKER_SMALL_CONE_RADIUS * 2;
-                marker.scale.z = MARKER_SMALL_CONE_HEIGHT;
-                marker.color.r = 0.5f;
-                marker.color.g = 0.5f;
-                marker.color.b = 0.5f;  // Unknown color (grey)
-            }
-            marker.color.a = 1.0; // Full opacity
-
-
-            marker_pub->publish(marker);
+    void writeTimestampsToFile(const rclcpp::Time& timestamp_received, const rclcpp::Time& timestamp_published) {
+        std::ofstream file("timestamps.txt", std::ios::app); // Open in append mode
+        if (file.is_open()) {
+            file << "Received: " << timestamp_received.seconds() << "s\n";
+            file << "Published: " << timestamp_published.seconds() << "s\n";
+            file << "------------------------------------------\n";
+            file.close();
+        } else {
+            RCLCPP_ERROR(this->get_logger(), "Failed to open timestamps.txt for writing.");
         }
     }
 
+    void calculateTime(const rclcpp::Time& start, const rclcpp::Time& end) {
+        rclcpp::Duration duration = end - start;
+        RCLCPP_INFO(this->get_logger(), "Time difference: %f seconds", duration.seconds());
 
-
-
-
+        std::ofstream file("algo_time.txt", std::ios::app); // Open in append mode
+        if (file.is_open()) {
+            file << "Time: " << duration.seconds() << "s\n";
+            file << "------------------------------------------\n";
+            file.close();
+        } else {
+            RCLCPP_ERROR(this->get_logger(), "Failed to open .txt for writing.");
+        }
+    }
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscriber_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cone_publisher_;
@@ -295,12 +267,15 @@ private:
 
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr restricted_fov_publisher_;
-
 };
 
 int main(int argc, char *argv[]) {
     rclcpp::init(argc, argv);
+
+    
     rclcpp::spin(std::make_shared<ConeDetectionNode>());
     rclcpp::shutdown();
+
+    
     return 0;
 }

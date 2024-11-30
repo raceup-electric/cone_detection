@@ -24,7 +24,9 @@ def generate_launch_description():
             executable='cone_detection_node',
             name='cone_detection_node',
             output='screen',
-            parameters=[]  # Add any parameters if needed
+            parameters=[
+                {'use_sim_time': True}
+            ]
         ),
 
         # Launch RViz with the specified configuration and fixed frame
