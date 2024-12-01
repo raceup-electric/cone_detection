@@ -22,6 +22,10 @@ include_directories(
   include
 )
 
+install(DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}/
+)
+
 # Specify source files
 set(SOURCES
   src/cone_detection_node.cpp

@@ -35,7 +35,7 @@ def generate_launch_description():
             executable='rviz2',
             name='rviz2',
             output='screen',
-            arguments=['-d', LaunchConfiguration('rviz_config')],
+            arguments=['-d', os.path.join('./src', 'cone_detection', 'launch', 'viz-reliable.rviz')],
             parameters=[{'fixed_frame': 'os_lidar'}]  # Set the default fixed frame
         )
     ])
