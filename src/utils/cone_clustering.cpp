@@ -3,7 +3,7 @@
 // DBSCAN parameters
 const float EPS = 0.5;                       // Cluster tolerance (distance)
 
-const int MIN_CLUSTER_SIZE = 20;  // Minimum number of points for a cluster to be considered valid
+const int MIN_CLUSTER_SIZE = 5;  // Minimum number of points for a cluster to be considered valid
 const int MAX_CLUSTER_SIZE = 2000; // Maximum number of points for a cluster to be considered valid
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,

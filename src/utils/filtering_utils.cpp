@@ -31,8 +31,8 @@ void coordinateBasedFiltering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud
 }
 
 // Define tunable constants for the rectangular region
-const float X_MIN = -10.0f;  // Minimum x-coordinate
-const float X_MAX = 1.0f;   // Maximum x-coordinate
+const float X_MIN = -20.0f;  // Minimum x-coordinate
+const float X_MAX = 0.0f;   // Maximum x-coordinate
 const float Y_MIN = -3.5f;  // Minimum y-coordinate
 const float Y_MAX = 3.5f;   // Maximum y-coordinate
 
