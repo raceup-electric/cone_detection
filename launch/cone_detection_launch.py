@@ -18,6 +18,11 @@ def generate_launch_description():
             description='Path to the RViz config file.'
         ),
 
+        DeclareLaunchArgument(
+            'use_system_default_qos',
+            default_value = "true" ,
+        ),
+
         # Launch the cone_detection_node
         Node(
             package='cone_detection',

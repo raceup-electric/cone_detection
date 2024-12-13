@@ -24,7 +24,6 @@
 #include <fstream>
 #include <time.h>
 
-//#include <eufs_msgs/msg/ConeArrayWithCovariance.msg>
 #include "eufs_msgs/msg/cone_array_with_covariance.hpp"
 
 
@@ -32,7 +31,6 @@
 const float LIDAR_HEIGHT = 0.4;
 const float HEIGHT_FILTER = 1.8;
 const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  // Maximum allowed height for all points (non-ground points)
-//const float DISTANCE_RADIUS_THRESHOLD = 20.0;       // Distance threshold for filtering
 
 const int MIN_POINTS = 3;                   // Minimum points per cluster
 const int MAX_POINTS = 500;
@@ -88,7 +86,7 @@ private:
 
         // Cluster the remaining points
         std::vector<pcl::PointCloud<pcl::PointXYZI>> cone_clusters;
-        performDBSCANClustering(ground_removed_cloud, cone_clusters, MIN_POINTS);
+        performDBSCANClustering(ground_removed_cloud, cone_clusters, MIN_POINTS, MAX_POINTS);
 
         // Classify clusters and store classified cones
         std::vector<pcl::PointCloud<pcl::PointXYZI>> classified_cones;
