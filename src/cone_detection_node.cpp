@@ -26,13 +26,19 @@
 
 #include "eufs_msgs/msg/cone_array_with_covariance.hpp"
 
+//CONSTANTS
 
+// LiDAR positioning with respect to the ground
+const float LIDAR_HEIGHT = 0.97;
 
-const float LIDAR_HEIGHT = 0.4;
-const float HEIGHT_FILTER = 1.8;
-const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  // Maximum allowed height for all points (non-ground points)
+// Height limit for the points in the pointcloud
+const float HEIGHT_FILTER = 0.7;
 
-const int MIN_POINTS = 3;                   // Minimum points per cluster
+// Maximum allowed height for all points (non-ground points)
+const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  
+
+// Cluster size thresholds
+const int MIN_POINTS = 10;                   
 const int MAX_POINTS = 500;
 
 // Cone size constraints for RVIZ2 Markers
@@ -40,8 +46,6 @@ const float MARKER_SMALL_CONE_HEIGHT = cone_detection::SMALL_CONE_HEIGHT;
 const float MARKER_SMALL_CONE_RADIUS = cone_detection::SMALL_CONE_BASE_RADIUS;
 const float MARKER_BIG_CONE_HEIGHT = cone_detection::BIG_CONE_HEIGHT;
 const float MARKER_BIG_CONE_RADIUS = cone_detection::BIG_CONE_BASE_RADIUS;
-
-
 
 class ConeDetectionNode : public rclcpp::Node {
 public:
@@ -53,8 +57,6 @@ public:
         cone_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/detected_cones", 10);
 
         marker_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/cone_markers", 10);
-        marker_pub = this->create_publisher<visualization_msgs::msg::Marker>("/cone_marker", 10);
-
 
         restricted_fov_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/restricted_fov", 10);
         
@@ -75,6 +77,9 @@ private:
         pcl::PointCloud<pcl::PointXYZI> filtered_cloud;
         restrictedFOVFiltering(pcl_cloud, filtered_cloud, MAX_HEIGHT_THRESHOLD);
 
+
+        //This is an optional publisher to see the field of view that is kept
+        //TODO: Comment this if it is not useful
         sensor_msgs::msg::PointCloud2 restricted_fov_msg;
         pcl::toROSMsg(filtered_cloud, restricted_fov_msg);
         restricted_fov_msg.header = msg->header;
@@ -147,7 +152,6 @@ private:
         cone_array_msg.big_orange_cones = big_orange_cones;
         cone_array_msg.unknown_color_cones = unknown_color_cones;
 
-
         /* size_t blue_cones_count = blue_cones.size();
         size_t yellow_cones_count = yellow_cones.size();
         size_t orange_cones_count = orange_cones.size();
@@ -160,22 +164,21 @@ private:
         RCLCPP_INFO(this->get_logger(), "Big orange cones count: %lu", big_orange_cones_count);
         RCLCPP_INFO(this->get_logger(), "Unknown color cones count: %lu", unknown_cones_count); */
 
-
         // Publish the cone array with covariance
         cone_pub->publish(cone_array_msg);
 
         // Publish detected cone clusters
+        //TODO: Comment this if it is not useful
         publishConePointCloud(classified_cones, msg->header);
 
         // Publish markers for each classified cone
+        //TODO: Comment this if it is not useful
         publishConeMarkers(classified_cones, msg->header);
 
         // Calculate the callback duration
         rclcpp::Time last_time = rclcpp::Clock(RCL_STEADY_TIME).now();
         //calculateTime(first_time, last_time);
     }
-
-
 
     void publishConePointCloud(const std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters,
                             const std_msgs::msg::Header& header) {
@@ -258,7 +261,7 @@ private:
             marker_array.markers.push_back(marker);
         }
 
-        // Clear previous markers
+        // Clear previous markers (important to remove static-objects noise)
         visualization_msgs::msg::Marker clear_marker;
         clear_marker.action = visualization_msgs::msg::Marker::DELETEALL;
         marker_array.markers.insert(marker_array.markers.begin(), clear_marker);
@@ -266,14 +269,10 @@ private:
         marker_publisher_->publish(marker_array);
 
 
-        //TODO: REMOVE
+        //TODO: Comment if not useful
         //rclcpp::Time timestamp_published = rclcpp::Clock(RCL_STEADY_TIME).now();
-
-
         // Write timestamps to file using the message's timestamp as received time
         //writeTimestampsToFile(rclcpp::Time(header.stamp), timestamp_published);
-
-        
     }
 
     void writeTimestampsToFile(const rclcpp::Time& timestamp_received, const rclcpp::Time& timestamp_published) {
@@ -305,9 +304,6 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscriber_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cone_publisher_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub;
-
-
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr restricted_fov_publisher_;
     rclcpp::Publisher<eufs_msgs::msg::ConeArrayWithCovariance>::SharedPtr cone_pub;
 

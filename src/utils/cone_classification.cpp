@@ -1,8 +1,6 @@
 #include "cone_detection/cone_classification.hpp"
 
-const float STRIPE_INTENSITY_THRESHOLD = 0.3f;  // Minimum intensity variation to detect stripes
-const float WHITE_STRIPE_INTENSITY_THRESHOLD = 2000.0f;  // Intensity threshold for white stripe detection (blue and orange cones)
-const float BLACK_STRIPE_INTENSITY_THRESHOLD = 50.0f; 
+const float WHITE_STRIPE_INTENSITY_THRESHOLD = 2000.0f;  // Intensity threshold for white stripe detection
 
 cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& cluster) {
     // Calculate cone dimensions (height, radius)

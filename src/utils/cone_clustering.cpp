@@ -1,7 +1,7 @@
 #include "cone_detection/cone_clustering.hpp"
 
 // DBSCAN parameters
-const float EPS = 0.5;                       // Cluster tolerance (distance)
+const float EPS = 0.5;      // Cluster tolerance (distance)
 
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
