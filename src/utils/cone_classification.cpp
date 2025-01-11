@@ -3,6 +3,9 @@
 const float WHITE_STRIPE_INTENSITY_THRESHOLD = 2000.0f;  // Intensity threshold for white stripe detection
 
 cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& cluster) {
+    //TEMPORANEO PER PROVE SENZA CLASSIFICAZIONE
+    return cone_detection::ConeType::UNKNOWN;
+
     // Calculate cone dimensions (height, radius)
     float height = calculateHeight(cluster);
     float base_radius = calculateBaseRadius(cluster);

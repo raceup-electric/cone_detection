@@ -1,7 +1,7 @@
 #include "cone_detection/cone_clustering.hpp"
 
 // DBSCAN parameters
-const float EPS = 0.5;      // Cluster tolerance (distance)
+const float EPS = 0.8;      // Cluster tolerance (distance)
 
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
@@ -24,14 +24,32 @@ void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
 
         // Store each cluster in a separate PointCloud
         for (const auto& indices : cluster_indices) {
-            // Check if the cluster has the desired number of points
-            if (indices.indices.size() >= min_points && indices.indices.size() <= max_points) {
-                pcl::PointCloud<pcl::PointXYZI> cluster;
-                for (const auto& index : indices.indices) {
-                    cluster.points.push_back(input_cloud.points[index]);
-                }
-                cone_clusters.push_back(cluster);
+            pcl::PointCloud<pcl::PointXYZI> cluster;
+
+            // Max and min coordinates of points
+            float min_x = input_cloud.points[indices.indices[0]].x;
+            float max_x = input_cloud.points[indices.indices[0]].x;
+            float min_y = input_cloud.points[indices.indices[0]].y;
+            float max_y = input_cloud.points[indices.indices[0]].y;
+            float min_z = input_cloud.points[indices.indices[0]].z;
+            float max_z = input_cloud.points[indices.indices[0]].z;
+            
+            // Add points to the cluster and update max/min values
+            for (const auto& index : indices.indices) {
+                cluster.points.push_back(input_cloud.points[index]);
+
+                if (input_cloud.points[index].x < min_x) min_x = input_cloud.points[index].x;
+                if (input_cloud.points[index].x > max_x) max_x = input_cloud.points[index].x;
+                if (input_cloud.points[index].y < min_y) min_y = input_cloud.points[index].y;
+                if (input_cloud.points[index].y > max_y) max_y = input_cloud.points[index].y;
+                if (input_cloud.points[index].z < min_z) min_z = input_cloud.points[index].z;
+                if (input_cloud.points[index].z > max_z) max_z = input_cloud.points[index].z;
             }
+
+            // Filter out big clusters
+            if( (max_x-min_x) < 0.25 && (max_y-min_y) < 0.25 )
+                cone_clusters.push_back(cluster);
+        
         }
     }
 
