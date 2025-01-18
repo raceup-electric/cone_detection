@@ -38,7 +38,7 @@ const float HEIGHT_FILTER = 0.7;
 const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  
 
 // Cluster size thresholds
-const int MIN_POINTS = 10;                   
+const int MIN_POINTS = 2;                   
 const int MAX_POINTS = 500;
 
 // Cone size constraints for RVIZ2 Markers
