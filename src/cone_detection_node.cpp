@@ -47,6 +47,12 @@ const float MARKER_SMALL_CONE_RADIUS = cone_detection::SMALL_CONE_BASE_RADIUS;
 const float MARKER_BIG_CONE_HEIGHT = cone_detection::BIG_CONE_HEIGHT;
 const float MARKER_BIG_CONE_RADIUS = cone_detection::BIG_CONE_BASE_RADIUS;
 
+
+// If the cone is to distant, o too few points,, do not classify it
+const float classification_distance_threshold = 15;
+const float min_points_for_classification = 15;
+
+
 class ConeDetectionNode : public rclcpp::Node {
 public:
     ConeDetectionNode() : Node("cone_detection_node") {
@@ -103,9 +109,7 @@ private:
 
         for (auto& cluster : cone_clusters) {
             if (cluster.points.size() >= MIN_POINTS && cluster.points.size() <= MAX_POINTS) {
-                // Only keep clusters within point count range
-                cone_detection::ConeType cone_type = classifyCone(cluster);
-
+            
                 // Calculate centroid for cone position
                 Eigen::Vector4f centroid(0, 0, 0, 0);
                 for (const auto& point : cluster.points) {
@@ -125,6 +129,15 @@ private:
                 cone_msg.covariance = {{
                     static_cast<double>(0.0f), static_cast<double>(0.0f), static_cast<double>(0.0f), static_cast<double>(0.000001f) // Identity covariance with small noise
                 }};
+
+                // Only keep clusters within point count range
+                cone_detection::ConeType cone_type; //= classifyCone(cluster);
+                if(centroid.norm() <= classification_distance_threshold && cluster.points.size() > min_points_for_classification){
+                    cone_type = classifyCone(cluster);
+                }
+                else{
+                    cone_type = cone_detection::ConeType::UNKNOWN;
+                }
 
                 // Classify cones and store them in appropriate lists
                 if (cone_type == cone_detection::ConeType::BIG_ORANGE) {
@@ -207,7 +220,14 @@ private:
             }
             centroid /= cluster.points.size();
 
-            cone_detection::ConeType cone_type = classifyCone(cluster);
+            cone_detection::ConeType cone_type; //= classifyCone(cluster);      
+            // Only keep clusters within point count range
+            if(centroid.norm() <= classification_distance_threshold && cluster.points.size() > min_points_for_classification){
+                cone_type = classifyCone(cluster);
+            }
+            else{
+                cone_type = cone_detection::ConeType::UNKNOWN;
+            }      
                 
             visualization_msgs::msg::Marker marker;
             marker.header = header;
