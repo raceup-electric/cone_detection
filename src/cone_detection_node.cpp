@@ -32,7 +32,7 @@
 const float LIDAR_HEIGHT = 0.97;
 
 // Height limit for the points in the pointcloud
-const float HEIGHT_FILTER = 0.7;
+const float HEIGHT_FILTER = 1.1;
 
 // Maximum allowed height for all points (non-ground points)
 const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  

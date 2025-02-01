@@ -47,7 +47,10 @@ void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
             }
 
             // Filter out big clusters
-            if( (max_x-min_x) < 0.25 && (max_y-min_y) < 0.25 )
+            if( (max_x-min_x) < 0.3 && 
+                (max_y-min_y) < 0.3 &&
+                (max_z-min_z) < 0.5 &&
+                (max_z-min_z) > 0.1 ) 
                 cone_clusters.push_back(cluster);
         
         }
