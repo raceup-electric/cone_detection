@@ -3,7 +3,6 @@
 #include "visualization_msgs/msg/marker.hpp"  // For publishing markers
 #include "visualization_msgs/msg/marker_array.hpp"  // For MarkerArray
 
-
 #include "pcl_conversions/pcl_conversions.h"  // PCL-ROS conversions
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
@@ -12,8 +11,6 @@
 #include <pcl/kdtree/kdtree.h>
 #include <Eigen/Dense>  // For centroid calculation
 #include <pcl/filters/voxel_grid.h>
-
-
 
 #include "cone_detection/cone_type.hpp"
 #include "cone_detection/cone_classification.hpp"
@@ -32,7 +29,7 @@
 const float LIDAR_HEIGHT = 0.97;
 
 // Height limit for the points in the pointcloud
-const float HEIGHT_FILTER = 0.7;
+const float HEIGHT_FILTER = 2.0;
 
 // Maximum allowed height for all points (non-ground points)
 const float MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;  
@@ -51,6 +48,9 @@ const float MARKER_BIG_CONE_RADIUS = cone_detection::BIG_CONE_BASE_RADIUS;
 // If the cone is to distant, o too few points,, do not classify it
 const float classification_distance_threshold = 15;
 const float min_points_for_classification = 15;
+
+const float EPS = 0.8;      // Cluster tolerance (distance)
+
 
 
 class ConeDetectionNode : public rclcpp::Node {
@@ -97,7 +97,7 @@ private:
 
         // Cluster the remaining points
         std::vector<pcl::PointCloud<pcl::PointXYZI>> cone_clusters;
-        performDBSCANClustering(ground_removed_cloud, cone_clusters, MIN_POINTS, MAX_POINTS);
+        performDBSCANClustering(ground_removed_cloud, cone_clusters, MIN_POINTS, MAX_POINTS, EPS);
 
         // Classify clusters and store classified cones
         std::vector<pcl::PointCloud<pcl::PointXYZI>> classified_cones;

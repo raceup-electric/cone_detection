@@ -1,11 +1,13 @@
 #include "cone_detection/cone_clustering.hpp"
+#include "cone_detection/cone_type.hpp"
 
 // DBSCAN parameters
-const float EPS = 0.8;      // Cluster tolerance (distance)
+const float EPS_subCluster = 0.15;      // Cluster tolerance (distance)
+const float tolerance = 0.1; //tolerance on height of clusters that are too big
 
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
-                             std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points, int max_points) {
+                             std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points, int max_points, float eps) {
         // Parameters for the number of points in a cluster
 
         // Build a KD-tree for clustering
@@ -15,7 +17,7 @@ void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
         // Perform DBSCAN-based clustering
         std::vector<pcl::PointIndices> cluster_indices;
         pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-        ec.setClusterTolerance(EPS);
+        ec.setClusterTolerance(eps);
         ec.setMinClusterSize(min_points);
         ec.setMaxClusterSize(max_points);
         ec.setSearchMethod(tree);
@@ -46,9 +48,17 @@ void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                 if (input_cloud.points[index].z > max_z) max_z = input_cloud.points[index].z;
             }
 
-            // Filter out big clusters
-            if( (max_x-min_x) < 0.25 && (max_y-min_y) < 0.25 )
+            // Check horizontal and vertical extents:
+            float extent_x = max_x - min_x;
+            float extent_y = max_y - min_y;
+            float extent_z = max_z - min_z;
+
+            if ((extent_x < 2*cone_detection::BIG_CONE_BASE_RADIUS) && (extent_y < 2*cone_detection::BIG_CONE_BASE_RADIUS)) {
                 cone_clusters.push_back(cluster);
-        
+            }
+            else if ((extent_z <= cone_detection::BIG_CONE_MAX_HEIGHT + tolerance) && eps!=EPS_subCluster)
+            {
+                performDBSCANClustering(cluster, cone_clusters, min_points, max_points, EPS_subCluster);
+            }
         }
     }

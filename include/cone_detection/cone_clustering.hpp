@@ -20,7 +20,7 @@
 
 #include <pcl/segmentation/region_growing.h>
 
-void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud, std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points, int max_points);
+void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud, std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points, int max_points, float eps);
 
 
 #endif  
