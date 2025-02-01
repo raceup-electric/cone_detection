@@ -78,3 +78,7 @@ List of ROS topics published and subscribed to by this node:
 (plus other debug publishers)
 ### Subscribed to:
 		- /ouster/points
+
+
+### Launch LiDAR in sensor mode
+```ros2 launch ouster_ros sensor.launch.xml        sensor_hostname:=os-122410001022.local ```
