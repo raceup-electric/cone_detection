@@ -26,5 +26,6 @@ float calculateBaseRadius(const pcl::PointCloud<pcl::PointXYZI>& cluster);
 
 float calculateAverageIntensity(const pcl::PointCloud<pcl::PointXYZI>& cluster) ;
 
+void normalizeIntensity(const pcl::PointCloud<pcl::PointXYZI>& input_cloud, pcl::PointCloud<pcl::PointXYZI>& output_cloud);
 
 #endif  

@@ -95,3 +95,31 @@ cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& clu
         }
         return intensity_sum / cluster.points.size();  // Average intensity
     }
+
+    // Helper function to normalize the intensity of a cluster
+    void normalizeIntensity(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
+                                pcl::PointCloud<pcl::PointXYZI>& output_cloud) {
+        output_cloud.clear();
+
+        float min_intensity = std::numeric_limits<float>::max();
+        float max_intensity = -std::numeric_limits<float>::max();
+
+        for (const auto& point : input_cloud.points) {
+            if (point.intensity < min_intensity) min_intensity = point.intensity;
+            if (point.intensity > max_intensity) max_intensity = point.intensity;
+        }
+
+        if(min_intensity == max_intensity) {
+            for (auto point : input_cloud.points) {
+                point.intensity = 0.0f;
+                output_cloud.push_back(point);
+            }
+            return;
+        }
+
+        for (auto point : input_cloud.points) {
+            point.intensity = (point.intensity - min_intensity) / (max_intensity - min_intensity);
+            output_cloud.push_back(point);
+        }
+
+    }
