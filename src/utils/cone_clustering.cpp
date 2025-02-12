@@ -2,8 +2,9 @@
 #include "cone_detection/cone_type.hpp"
 
 // DBSCAN parameters
-const float EPS_subCluster = 0.15;      // Cluster tolerance (distance)
+const float EPS_subCluster = 0.1;      // Cluster tolerance (distance)
 const float tolerance = 0.1; //tolerance on height of clusters that are too big
+const float min_subCluster_points_ratio = 0.1; // Minimum number of points in a subcluster, expressed as a fraction of the main cluster's points
 
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
@@ -53,12 +54,14 @@ void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
             float extent_y = max_y - min_y;
             float extent_z = max_z - min_z;
 
-            if ((extent_x < 2*cone_detection::BIG_CONE_BASE_RADIUS) && (extent_y < 2*cone_detection::BIG_CONE_BASE_RADIUS)) {
-                cone_clusters.push_back(cluster);
-            }
-            else if ((extent_z <= cone_detection::BIG_CONE_MAX_HEIGHT + tolerance) && eps!=EPS_subCluster)
-            {
-                performDBSCANClustering(cluster, cone_clusters, min_points, max_points, EPS_subCluster);
+            if ((extent_z <= cone_detection::BIG_CONE_MAX_HEIGHT + tolerance) && (extent_z >= tolerance) ) {
+                if ((extent_x < 2*cone_detection::BIG_CONE_BASE_RADIUS + tolerance) && (extent_y < 2*cone_detection::BIG_CONE_BASE_RADIUS + tolerance)) {
+                    cone_clusters.push_back(cluster);
+                }
+                else if (eps != EPS_subCluster)
+                {
+                    performDBSCANClustering(cluster, cone_clusters, indices.indices.size()*min_subCluster_points_ratio, max_points, EPS_subCluster);
+                }
             }
         }
     }
