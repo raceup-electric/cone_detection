@@ -1,6 +1,7 @@
 #include "cone_detection/cone_classification.hpp"
 
 const float WHITE_STRIPE_INTENSITY_THRESHOLD = 2000.0f;  // Intensity threshold for white stripe detection
+const int NUMBER_OF_CONE_STRIPES = 7;
 
 cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& cluster) {
     //TEMPORANEO PER PROVE SENZA CLASSIFICAZIONE
@@ -122,4 +123,41 @@ cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& clu
             output_cloud.push_back(point);
         }
 
+    }
+
+    // Helper function to compute the N-dimensional vector representing the intensity profile of a cluster
+    void calculateIntensityVector(const pcl::PointCloud<pcl::PointXYZI>& cluster,
+                                  std::vector<float>& output_vector, int number_of_stripes) {
+        pcl::PointCloud<pcl::PointXYZI> normalized_cluster;
+        normalizeIntensity(cluster, normalized_cluster);
+
+        float z_min = std::numeric_limits<float>::max();
+        float z_max = std::numeric_limits<float>::lowest();
+        
+        for (const auto& point : normalized_cluster.points) {
+            if (point.z < z_min) z_min = point.z;
+            if (point.z > z_max) z_max = point.z;
+        }
+
+        if(z_min == z_max) {
+            // TODO handle
+            // -everything NaN
+            // -first avg and everything else NaN
+            return;
+        }
+
+        std::vector<pcl::PointCloud<pcl::PointXYZI>> stripes(number_of_stripes);
+
+        for (const auto& point : normalized_cluster.points) {
+            int index = (point.z - z_min) * number_of_stripes / (z_max - z_min);
+
+            index = std::min(index, number_of_stripes - 1);
+
+            stripes[index].push_back(point);
+        }
+
+        output_vector.clear();
+        for (const auto& stripe : stripes) {
+            output_vector.push_back(calculateAverageIntensity(stripe)); //if stripe is empty, average is NaN
+        }
     }
