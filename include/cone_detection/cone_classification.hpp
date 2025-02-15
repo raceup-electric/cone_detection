@@ -3,6 +3,7 @@
 
 #include <vector>  // For std::vector
 #include <algorithm>  // For std::min
+#include <cmath>  // For NAN
 
 #include "cone_detection/cone_type.hpp"
 

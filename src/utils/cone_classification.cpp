@@ -139,10 +139,11 @@ cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& clu
             if (point.z > z_max) z_max = point.z;
         }
 
+        // if all points have the same z value, don't classify the cluster
         if(z_min == z_max) {
-            // TODO handle
-            // -everything NaN
-            // -first avg and everything else NaN
+            for (int i=0; i<number_of_stripes; i++) {
+                output_vector.push_back(NAN);
+            }
             return;
         }
 
