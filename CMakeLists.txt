@@ -15,6 +15,8 @@ find_package(pcl_msgs REQUIRED)
 find_package(eufs_msgs REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
+find_package(ament_index_cpp REQUIRED) 
+
 
 # Additional system dependencies
 find_package(PCL REQUIRED COMPONENTS segmentation filters kdtree)
@@ -48,6 +50,7 @@ ament_target_dependencies(${PROJECT_NAME}_node
   pcl_conversions
   pcl_msgs
   eufs_msgs
+  ament_index_cpp
 )
 
 # Link PCL libraries manually if required
@@ -65,6 +68,11 @@ install(TARGETS ${PROJECT_NAME}_node
 install(DIRECTORY include/ 
   DESTINATION include/
 )
+
+install(DIRECTORY config/
+  DESTINATION share/${PROJECT_NAME}/config
+)
+
 
 # Ament package
 ament_package()

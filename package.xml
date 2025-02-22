@@ -17,6 +17,7 @@
   <depend>pcl_msgs</depend>
   <depend>Eigen3</depend>
   <depend>eufs_msgs</depend>
+    <depend>ament_index_cpp</depend>
 
   <!-- Build dependencies -->
   <build_depend>visualization_msgs</build_depend>

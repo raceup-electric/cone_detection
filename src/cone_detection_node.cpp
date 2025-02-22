@@ -23,6 +23,9 @@
 
 #include "eufs_msgs/msg/cone_array_with_covariance.hpp"
 #include "cone_detection/mission_config.hpp"
+#include "ament_index_cpp/get_package_share_directory.hpp"
+#include <filesystem>
+
 
 
 //CONSTANTS
@@ -41,9 +44,12 @@ const float MARKER_BIG_CONE_RADIUS = cone_detection::BIG_CONE_BASE_RADIUS;
 class ConeDetectionNode : public rclcpp::Node {
 public:
     ConeDetectionNode() : Node("cone_detection_node") {
+        
+        std::string package_share_dir = ament_index_cpp::get_package_share_directory("cone_detection");
 
-        // Load mission configuration
-        std::string config_path = this->declare_parameter<std::string>("config_path", "/home/anita/ros2_ws/src/cone_detection/config/missions.yaml");
+        // Construct the relative path to the mission config file
+        std::string config_path = package_share_dir + "/config/missions.yaml";
+
         MissionConfig mission_config(config_path);
 
         // Get the mission type

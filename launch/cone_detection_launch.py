@@ -24,12 +24,6 @@ def generate_launch_description():
         ),
 
         DeclareLaunchArgument(
-            'config_path',
-            default_value='/home/anita/ros2_ws/src/cone_detection/config/missions.yaml',
-            description='Path to the configuration file.'
-        ),
-
-        DeclareLaunchArgument(
             'mission',
             default_value='trackdrive',
             description='Mission mode (e.g., acceleration, trackdrive, skidpad, etc.).'
@@ -43,7 +37,6 @@ def generate_launch_description():
             output='screen',
             parameters=[
                 {'use_sim_time': True},
-                {'config_path': LaunchConfiguration('config_path')},
                 {'mission': LaunchConfiguration('mission')}
             ]
         ),
