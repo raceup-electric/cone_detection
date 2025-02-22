@@ -23,6 +23,18 @@ def generate_launch_description():
             default_value = "true" ,
         ),
 
+        DeclareLaunchArgument(
+            'config_path',
+            default_value='/home/anita/ros2_ws/src/cone_detection/config/missions.yaml',
+            description='Path to the configuration file.'
+        ),
+
+        DeclareLaunchArgument(
+            'mission',
+            default_value='trackdrive',
+            description='Mission mode (e.g., acceleration, trackdrive, skidpad, etc.).'
+        ),
+
         # Launch the cone_detection_node
         Node(
             package='cone_detection',
@@ -30,7 +42,9 @@ def generate_launch_description():
             name='cone_detection_node',
             output='screen',
             parameters=[
-                {'use_sim_time': True}
+                {'use_sim_time': True},
+                {'config_path': LaunchConfiguration('config_path')},
+                {'mission': LaunchConfiguration('mission')}
             ]
         ),
 

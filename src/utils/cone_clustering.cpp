@@ -8,7 +8,7 @@ const float min_subCluster_points_ratio = 0.1; // Minimum number of points in a 
 
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
-                             std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points, int max_points, float eps) {
+                             std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points, int max_points, float eps, float EPS_subClustering) {
         // Parameters for the number of points in a cluster
 
         // Build a KD-tree for clustering
@@ -60,7 +60,7 @@ void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                 }
                 else if (eps != EPS_subCluster)
                 {
-                    performDBSCANClustering(cluster, cone_clusters, indices.indices.size()*min_subCluster_points_ratio, max_points, EPS_subCluster);
+                    performDBSCANClustering(cluster, cone_clusters, indices.indices.size()*min_subCluster_points_ratio, max_points, EPS_subCluster, EPS_subClustering);
                 }
             }
         }

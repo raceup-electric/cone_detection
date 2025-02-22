@@ -13,6 +13,8 @@ find_package(visualization_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_msgs REQUIRED)
 find_package(eufs_msgs REQUIRED)
+find_package(yaml-cpp REQUIRED)
+
 
 # Additional system dependencies
 find_package(PCL REQUIRED COMPONENTS segmentation filters kdtree)
@@ -51,6 +53,7 @@ ament_target_dependencies(${PROJECT_NAME}_node
 # Link PCL libraries manually if required
 target_link_libraries(${PROJECT_NAME}_node
   ${PCL_LIBRARIES}
+  yaml-cpp
 )
 
 # Install targets
