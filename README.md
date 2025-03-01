@@ -1,12 +1,4 @@
 # cone_detection
-Perception module
-
-
-IMPORTANT: when launching ouster_ros node in sensor mode (live), don't forget to specify  **use_system_default_qos:=true**
-
-Complete command: ros2 launch ouster_ros sensor.launch.xml sensor_hostname:=os-122410001022.local use_system_default_qos:=true
-
-##
 
 This is the perception module of the Autonomous System stack. The node gets a continuous flow of data from the Ouster OS1 LiDAR, processing each frame to detect and classify cones present in the scene.
 
@@ -80,5 +72,15 @@ List of ROS topics published and subscribed to by this node:
 		- /ouster/points
 
 
-### Launch LiDAR in sensor mode
+## Launch LiDAR in sensor mode
+
+To launch the ouster_ros node in sensor mode (live), use this command:
+
 ```ros2 launch ouster_ros sensor.launch.xml        sensor_hostname:=os-122410001022.local ```
+
+**IMPORTANT**: before launching the node, you need to change some lines in ```src/ouster-ros/ouster-ros/launch/sensor.composite.launch.xml```:
+
+-  ```<arg name="point_cloud_frame" default=""```, change ```default=""``` to ```default="os_lidar"```
+-  ```<arg name="use_system_default_qos" default="false"```, change ```"false"``` to ```"true"```
+
+Alternatively, add  ```use_system_default_qos:=true``` at the end of the command, without the need of editing the file.
