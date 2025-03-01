@@ -4,6 +4,39 @@ const float WHITE_STRIPE_INTENSITY_THRESHOLD = 2000.0f;  // Intensity threshold 
 const int NUMBER_OF_CONE_STRIPES = 7;
 
 cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& cluster) {
+
+    std::vector<std::vector<float>> reference_profiles(4); //bad code, just for testing
+    reference_profiles[(int)cone_detection::ConeType::BIG_ORANGE] = {0.33889061, 0.44667722, 0.70835606, 0.42006478, 0.52143861, 0.67097833, 0.29279672};
+    reference_profiles[(int)cone_detection::ConeType::BLUE] =       {0.52836025, 0.63063906, 0.68995425, 0.74024131, 0.63775256, 0.5954325 , 0.57455013};
+    reference_profiles[(int)cone_detection::ConeType::YELLOW] =     {0.44346414, 0.39468338, 0.08625297, 0.0713861 , 0.29279338, 0.48634307, 0.50378403};
+    reference_profiles[(int)cone_detection::ConeType::ORANGE] =     {0.34416508, 0.37264679, 0.66196996, 0.65220696, 0.68006992, 0.40877792, 0.30619537};
+
+    std::vector<float> intensity_profile;
+    calculateIntensityVector(cluster, intensity_profile, NUMBER_OF_CONE_STRIPES);
+
+    for (float n : intensity_profile) {
+        if(std::isnan(n)) return cone_detection::ConeType::UNKNOWN;
+    }
+
+    float min_distance=1;
+    int min_index = (int)cone_detection::ConeType::UNKNOWN;
+
+    for (int i=0; i<4; i++) {
+
+        float distance_squared = 0;
+        for (int j=0; j<NUMBER_OF_CONE_STRIPES; j++) {
+            distance_squared += (reference_profiles[i][j] - intensity_profile[j]) * (reference_profiles[i][j] - intensity_profile[j]);
+        }
+
+        if(distance_squared < min_distance && distance_squared < 0.1) {
+            min_distance = distance_squared;
+            min_index = i;
+        }
+
+    }
+
+    return (cone_detection::ConeType)min_index;
+
     //TEMPORANEO PER PROVE SENZA CLASSIFICAZIONE
     return cone_detection::ConeType::UNKNOWN;
 

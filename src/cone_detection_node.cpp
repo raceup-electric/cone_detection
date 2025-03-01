@@ -102,6 +102,17 @@ private:
         std::vector<eufs_msgs::msg::ConeWithCovariance> unknown_color_cones;
 
         for (auto& cluster : cone_clusters) {
+
+            /////////// PRINTS THE INTENSITY PROFILE OF EVERY CLUSTER
+            /*int number_of_stripes = 7;
+            std::vector<float> intensity_profile;
+            calculateIntensityVector(cluster, intensity_profile, number_of_stripes);
+            RCLCPP_INFO(this->get_logger(), "-----INTENSITY PROFILE-----");
+            for(float num : intensity_profile) {
+                RCLCPP_INFO(this->get_logger(), "%f", num);
+            }
+            ////////////*/
+
             if (cluster.points.size() >= MIN_POINTS && cluster.points.size() <= MAX_POINTS) {
                 // Only keep clusters within point count range
                 cone_detection::ConeType cone_type = classifyCone(cluster);
