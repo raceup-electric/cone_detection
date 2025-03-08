@@ -58,7 +58,7 @@ After the installation steps:
     ros2 launch cone_detection cone_detection_launch.py
     ```
 
-**Note:** in order to make the node actually do anything you need to physically connect the LiDAR with the software provided at https://github.com/ouster-lidar/ouster-ros/tree/ros2-foxy or play a recorded bag.
+**Note:** in order to make the node actually do anything you need to physically connect the LiDAR in sensor mode or play a recorded bag.
 
 
 ## ROS Topics
@@ -74,13 +74,8 @@ List of ROS topics published and subscribed to by this node:
 
 ## Launch LiDAR in sensor mode
 
+Clone the ouster_ros repository at https://github.com/raceup-electric/ouster-ros/tree/ros2-foxy (ros2-foxy branch!!)
+
 To launch the ouster_ros node in sensor mode (live), use this command:
 
-```ros2 launch ouster_ros sensor.launch.xml        sensor_hostname:=os-122410001022.local ```
-
-**IMPORTANT**: before launching the node, you need to change some lines in ```src/ouster-ros/ouster-ros/launch/sensor.composite.launch.xml```:
-
--  ```<arg name="point_cloud_frame" default=""```, change ```default=""``` to ```default="os_lidar"```
--  ```<arg name="use_system_default_qos" default="false"```, change ```"false"``` to ```"true"```
-
-Alternatively, add  ```use_system_default_qos:=true``` at the end of the command, without the need of editing the file.
+```ros2 launch ouster_ros driver.launch.py```
