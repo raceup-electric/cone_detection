@@ -26,6 +26,8 @@
 #include "ament_index_cpp/get_package_share_directory.hpp"
 #include <filesystem>
 
+#include <chrono>
+
 
 
 //CONSTANTS
@@ -64,8 +66,6 @@ public:
         }
         
 
-
-
         HEIGHT_FILTER = mission_config.getFloatParam(mission, "height_filter", 2.0);
         MIN_POINTS = mission_config.getIntParam(mission, "min_points", 2);
         MAX_POINTS = mission_config.getIntParam(mission, "max_points", 500);
@@ -79,8 +79,6 @@ public:
 
         MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;
 
-    
-
         pointcloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
                 "/ouster/points", 10,
                 std::bind(&ConeDetectionNode::pointCloudCallback, this, std::placeholders::_1));
@@ -91,7 +89,7 @@ public:
 
         restricted_fov_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/restricted_fov", 10);
         
-        cone_pub = this->create_publisher<eufs_msgs::msg::ConeArrayWithCovariance>("/cone_pose", 1);
+        cone_pub = this->create_publisher<eufs_msgs::msg::ConeArrayWithCovariance>("/cone_pose", 10);
     }
 
 private:
@@ -107,7 +105,6 @@ private:
         // Filter out points based on their coordinates
         pcl::PointCloud<pcl::PointXYZI> filtered_cloud;
         restrictedFOVFiltering(pcl_cloud, filtered_cloud, MAX_HEIGHT_THRESHOLD);
-
 
         //This is an optional publisher to see the field of view that is kept
         //TODO: Comment this if it is not useful
@@ -184,6 +181,28 @@ private:
         // Prepare the ConeArrayWithCovariance message
         eufs_msgs::msg::ConeArrayWithCovariance cone_array_msg;
         cone_array_msg.header = msg->header;  // Use the same header as the PointCloud2 message
+        cone_array_msg.header.frame_id = "os_lidar"; // Reference frame
+
+       
+        /*-------------------------------------------------*/
+         /*
+         * this section is done to 
+         * make coherent timestamps to give
+         * as input to SLAM
+         */
+
+        // start relative time 3810.944641096
+        // start absolute time 1740236955.605685116 (approximately corresponds to start relative time moment)
+        uint64_t start_relative_time = 3810*1e9 + 944641096;
+        uint64_t start_absolute_time = 1740236955*1e9 + 605685116;
+        uint64_t current_relative_time = msg->header.stamp.sec*1e9 + msg->header.stamp.nanosec;
+        uint64_t delta_time = current_relative_time - start_relative_time;
+        uint64_t current_absolute_time = start_absolute_time + delta_time;
+
+        cone_array_msg.header.stamp = rclcpp::Time(current_absolute_time);
+
+        /*-------------------------------------------------*/
+
         cone_array_msg.blue_cones = blue_cones;
         cone_array_msg.yellow_cones = yellow_cones;
         cone_array_msg.orange_cones = orange_cones;
@@ -202,6 +221,8 @@ private:
         RCLCPP_INFO(this->get_logger(), "Big orange cones count: %lu", big_orange_cones_count);
         RCLCPP_INFO(this->get_logger(), "Unknown color cones count: %lu", unknown_cones_count); */
 
+        // std::cout << "absolute time: " << cone_array_msg.header.stamp.sec << "." << cone_array_msg.header.stamp.nanosec << std::endl;
+
         // Publish the cone array with covariance
         cone_pub->publish(cone_array_msg);
 
@@ -215,7 +236,7 @@ private:
 
         // Calculate the callback duration
         rclcpp::Time last_time = rclcpp::Clock(RCL_STEADY_TIME).now();
-        //calculateTime(first_time, last_time);
+        calculateTime(first_time, last_time);
     }
 
     void publishConePointCloud(const std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters,

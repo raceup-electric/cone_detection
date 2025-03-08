@@ -1,16 +1,16 @@
 #include "cone_detection/filtering_utils.hpp"
 
 // Define tunable constants for the rectangular region
-const float X_MIN = -25.0;  // Minimum x-coordinate
-const float X_MAX = 5.0;   // Maximum x-coordinate
-const float Y_MIN = -15;  // Minimum y-coordinate
-const float Y_MAX = 15;   // Maximum y-coordinate
+const float X_MIN = -15.;  // Minimum x-coordinate
+const float X_MAX = 0.5;   // Maximum x-coordinate
+const float Y_MIN = -3;  // Minimum y-coordinate //-5
+const float Y_MAX = 3;   // Maximum y-coordinate //5
 
 // Car bounding box
-const float CAR_X_MIN = -2.0; //front
-const float CAR_X_MAX = 1.5; //back
-const float CAR_Y_MIN = -0.75; //left
-const float CAR_Y_MAX = 0.75; //right
+const float CAR_X_MIN = -0.5; //front
+const float CAR_X_MAX = 2.5; //back
+const float CAR_Y_MIN = -0.85; //left
+const float CAR_Y_MAX = 0.85; //right
 
 void restrictedFOVFiltering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                              pcl::PointCloud<pcl::PointXYZI>& output_cloud,
