@@ -1,9 +1,7 @@
-#include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
-#include "visualization_msgs/msg/marker.hpp"  // For publishing markers
-#include "visualization_msgs/msg/marker_array.hpp"  // For MarkerArray
+#include <iostream>
+#include <fstream>
 
-#include "pcl_conversions/pcl_conversions.h"  // PCL-ROS conversions
+#include <pcl_conversions/pcl_conversions.h>  // PCL-ROS conversions
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/extract_indices.h>
@@ -11,23 +9,19 @@
 #include <pcl/kdtree/kdtree.h>
 #include <Eigen/Dense>  // For centroid calculation
 #include <pcl/filters/voxel_grid.h>
+#include "eufs_msgs/msg/cone_array_with_covariance.hpp"
+#include "cone_detection/mission_config.hpp"
+#include "ament_index_cpp/get_package_share_directory.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "visualization_msgs/msg/marker.hpp"  // For publishing markers
+#include "visualization_msgs/msg/marker_array.hpp"  // For MarkerArray
 
 #include "cone_detection/cone_type.hpp"
 #include "cone_detection/cone_classification.hpp"
 #include "cone_detection/filtering_utils.hpp"
 #include "cone_detection/ground_removal.hpp"
 #include "cone_detection/cone_clustering.hpp"
-
-#include <fstream>
-#include <time.h>
-
-#include "eufs_msgs/msg/cone_array_with_covariance.hpp"
-#include "cone_detection/mission_config.hpp"
-#include "ament_index_cpp/get_package_share_directory.hpp"
-#include <filesystem>
-
-#include <chrono>
-
 
 
 //CONSTANTS
@@ -40,7 +34,12 @@ const float MARKER_SMALL_CONE_HEIGHT = cone_detection::SMALL_CONE_HEIGHT;
 const float MARKER_SMALL_CONE_RADIUS = cone_detection::SMALL_CONE_BASE_RADIUS;
 const float MARKER_BIG_CONE_HEIGHT = cone_detection::BIG_CONE_HEIGHT;
 const float MARKER_BIG_CONE_RADIUS = cone_detection::BIG_CONE_BASE_RADIUS;
+const bool VISUALIZE_COVAR = true;
 
+// standard deviation for lidar measurments according to the datasheet
+const double SIGMA_R = 0.025; // range accuracy: 2.5cm for lambertion surfaces
+const double SIGMA_H = 0.0001745329; // horizontal angle accuracy: 0.01 degrees
+const double SIGMA_V = 0.0001745329; // vertical angle accuracy: 0.01 degrees
 
 
 class ConeDetectionNode : public rclcpp::Node {
@@ -94,6 +93,54 @@ public:
 
 private:
 
+	// the (x,y,z) point is obtained by transforming a measurment done in polar coordinates.
+	// the covariance matrix is diagonal for the measurment in polar coordinates.
+	// the covariance matrix in cartesian coordinates is computed using the jacobian.
+	Eigen::Matrix3d computePointCovariance(double x, double y, double z) {
+		double r = std::sqrt(x * x + y * y + z * z);
+		double h = std::atan2(y, x);
+		double v = std::asin(z / r);
+
+		Eigen::Matrix3d J;
+		J(0, 0) = std::cos(v) * std::cos(h);
+		J(0, 1) = -r * std::cos(v) * std::sin(h);
+		J(0, 2) = -r * std::sin(v) * std::cos(h);
+		J(1, 0) = std::cos(v) * std::sin(h);
+		J(1, 1) = r * std::cos(v) * std::cos(h);
+		J(1, 2) = -r * std::sin(v) * std::sin(h);
+		J(2, 0) = std::sin(v);
+		J(2, 1) = 0;
+		J(2, 2) = r * std::cos(v);
+
+		Eigen::Matrix3d SigmaSph = Eigen::Matrix3d::Zero();
+		SigmaSph(0, 0) = SIGMA_R * SIGMA_R;
+		SigmaSph(1, 1) = SIGMA_H * SIGMA_H;
+		SigmaSph(2, 2) = SIGMA_V * SIGMA_V;
+
+		return J * SigmaSph * J.transpose();
+	}
+
+	Eigen::Vector3f computeClusterCentroid(const std::vector<pcl::PointXYZI, Eigen::aligned_allocator<pcl::PointXYZI>>& points) {
+		Eigen::Vector3f points_sum(0, 0, 0);
+		for (const auto& point : points) {
+			points_sum[0] += point.x;
+			points_sum[1] += point.y;
+			points_sum[2] += point.z;
+		}
+		return points_sum / points.size();
+	}
+
+	Eigen::Matrix3d computeClusterCovariance(const std::vector<pcl::PointXYZI, Eigen::aligned_allocator<pcl::PointXYZI>>& points) {
+		Eigen::Matrix3d cov_sum = Eigen::Matrix3d::Zero();
+		for (const auto& point : points) {
+			cov_sum += computePointCovariance(point.x, point.y, point.z);
+		}
+		auto n = points.size();
+		// the centroid is the sum of points, with each pointed weighted 1/n
+		// since each point is weighted 1/n, each covariance matrix is weighted 1/n^2
+		return cov_sum / (n * n);
+	}
+
     void pointCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
         // Calculate the callback duration
         rclcpp::Time first_time = rclcpp::Clock(RCL_STEADY_TIME).now();
@@ -131,15 +178,9 @@ private:
 
         for (auto& cluster : cone_clusters) {
             if (cluster.points.size() >= MIN_POINTS && cluster.points.size() <= MAX_POINTS) {
-            
-                // Calculate centroid for cone position
-                Eigen::Vector4f centroid(0, 0, 0, 0);
-                for (const auto& point : cluster.points) {
-                    centroid[0] += point.x;
-                    centroid[1] += point.y;
-                    centroid[2] += point.z;
-                }
-                centroid /= cluster.points.size();
+				auto centroid = computeClusterCentroid(cluster.points);
+				auto centroid_cov = computeClusterCovariance(cluster.points);
+				//RCLCPP_INFO(this->get_logger(), "cone has n = %i, dist = %f, cov = %f", cluster.points.size(), centroid.norm(), pow(centroid_cov.determinant(), 1./6));
 
                 // Create a ConeWithCovariance message
                 eufs_msgs::msg::ConeWithCovariance cone_msg;
@@ -147,9 +188,9 @@ private:
                 cone_msg.point.y = centroid[1];
                 cone_msg.point.z = centroid[2];
 
-                // Set the covariance matrix (identity matrix with small noise on the last element)
+                // Set the covariance matrix, ignoring errors along z (consider only the upper-left 2x2 submatrix)
                 cone_msg.covariance = {{
-                    static_cast<double>(0.0f), static_cast<double>(0.0f), static_cast<double>(0.0f), static_cast<double>(0.000001f) // Identity covariance with small noise
+					centroid_cov(0, 0), centroid_cov(0, 1), centroid_cov(1, 1), centroid_cov(2, 2)
                 }};
 
                 // Only keep clusters within point count range
@@ -258,13 +299,8 @@ private:
         for (const auto& cluster : cone_clusters) {
             if (cluster.points.empty()) continue;
 
-            Eigen::Vector4f centroid(0, 0, 0, 0);
-            for (const auto& point : cluster.points) {
-                centroid[0] += point.x;
-                centroid[1] += point.y;
-                centroid[2] += point.z;
-            }
-            centroid /= cluster.points.size();
+			auto centroid = computeClusterCentroid(cluster.points);
+			auto cov = computeClusterCovariance(cluster.points);
 
             cone_detection::ConeType cone_type; //= classifyCone(cluster);      
             // Only keep clusters within point count range
@@ -323,6 +359,13 @@ private:
                 marker.color.b = 0.5f;  // Unknown color (grey)
             }
             marker.color.a = 0.4; // Opacity
+
+			// visualize covariance
+			if (VISUALIZE_COVAR) {
+				float scale = 100;
+				marker.scale.x = sqrt(cov(0,0)) * scale;
+				marker.scale.y = sqrt(cov(1,1)) * scale;
+			}
 
             marker_array.markers.push_back(marker);
         }
