@@ -1,5 +1,6 @@
 #include "cone_detection/cone_clustering.hpp"
 #include "cone_detection/cone_type.hpp"
+#include "dbscan/algo.h"
 
 // DBSCAN parameters
 const float EPS_subCluster = 0.1;      // Cluster tolerance (distance)
@@ -9,24 +10,34 @@ const float min_subCluster_points_ratio = 0.1; // Minimum number of points in a 
 
 void performDBSCANClustering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                              std::vector<pcl::PointCloud<pcl::PointXYZI>>& cone_clusters, int min_points, int max_points, float eps, float EPS_subClustering) {
-        // Parameters for the number of points in a cluster
 
-        // Build a KD-tree for clustering
-        pcl::search::KdTree<pcl::PointXYZI>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZI>());
-        tree->setInputCloud(input_cloud.makeShared());
+        int n = input_cloud.points.size(); // number of data points
+        std::vector<double> data(n*3); // data points
+        std::vector<int> labels(n); // label ids get saved here
+        std::vector<char> core_samples(n); // a flag determining whether or not the sample is a core sample is saved here
+        std::vector<int> core_point(n);
 
-        // Perform DBSCAN-based clustering
-        std::vector<pcl::PointIndices> cluster_indices;
-        pcl::EuclideanClusterExtraction<pcl::PointXYZI> ec;
-        ec.setClusterTolerance(eps);
-        ec.setMinClusterSize(min_points);
-        ec.setMaxClusterSize(max_points);
-        ec.setSearchMethod(tree);
-        ec.setInputCloud(input_cloud.makeShared());
-        ec.extract(cluster_indices);
+        // Populate the 'data' vector with point cloud coordinates
+        for (int i = 0; i < n; i++) {
+            data[i*3 + 0] = input_cloud.points[i].x;
+            data[i*3 + 1] = input_cloud.points[i].y;
+            data[i*3 + 2] = input_cloud.points[i].z;
+        }
+
+        // Perform DBSCAN clustering
+        DBSCAN<3>(n, data.data(), eps, min_points, (bool*)core_samples.data(), core_point.data(), labels.data());
+
+        // Group points by their assigned cluster labels
+        std::unordered_map<int, pcl::PointIndices> cluster_indices;
+        for (int i = 0; i < n; i++) {
+            if(labels[i] == -1) continue; //invalid point
+            cluster_indices[labels[i]].indices.push_back(i);
+        }
 
         // Store each cluster in a separate PointCloud
-        for (const auto& indices : cluster_indices) {
+        for (const auto& [key, indices] : cluster_indices) {
+            if(indices.indices.size() > max_points) continue;
+            
             pcl::PointCloud<pcl::PointXYZI> cluster;
 
             // Max and min coordinates of points
