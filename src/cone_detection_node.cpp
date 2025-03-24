@@ -70,7 +70,7 @@ public:
         MIN_POINTS = mission_config.getIntParam(mission, "min_points", 2);
         MAX_POINTS = mission_config.getIntParam(mission, "max_points", 500);
         classification_distance_threshold = mission_config.getFloatParam(mission, "classification_distance_threshold", 15.0);
-        min_points_for_classification = mission_config.getFloatParam(mission, "min_points_for_classification", 15.0);
+        min_points_for_classification = mission_config.getIntParam(mission, "min_points_for_classification", 15);
         EPS = mission_config.getFloatParam(mission, "eps", 0.8);
         EPS_subClustering = mission_config.getFloatParam(mission, "eps_reclustering", 0.15);
 
@@ -350,7 +350,7 @@ private:
     int MIN_POINTS;
     int MAX_POINTS; 
     float classification_distance_threshold; 
-    float min_points_for_classification; 
+    int min_points_for_classification; 
     float EPS; 
     float EPS_subClustering; 
     float MAX_HEIGHT_THRESHOLD; 

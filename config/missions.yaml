@@ -1,36 +1,36 @@
+height_filter: 1.5
+min_points: 5
+max_points: 1000
+classification_distance_threshold: 10.0
+min_points_for_classification: 10
+eps: 0.6
+eps_reclustering: 0.1
+
+car_x_min: 0.0
+car_x_max: 3.0
+car_y_min: -0.75
+car_y_max: 0.75
+
+fov_x_min: -1
+fov_x_max: 20
+fov_y_min: -5
+fov_y_max: 5
+
 missions:
   acceleration:
-    height_filter: 1.8
-    min_points: 2
-    max_points: 500
-    classification_distance_threshold: 15.0
-    min_points_for_classification: 15.0
-    eps: 0.8
-    eps_reclustering: 0.15
+    fov_x_min: 0
+    fov_x_max: 25
+    fov_y_min: -2
+    fov_y_max: 2
 
   skidpad:
-    height_filter: 2.0
-    min_points: 5
-    max_points: 400
-    classification_distance_threshold: 10.0
-    min_points_for_classification: 10.0
     eps: 0.6
     eps_reclustering: 0.1
 
   trackdrive:
-    height_filter: 2.0
-    min_points: 2
-    max_points: 500
-    classification_distance_threshold: 15.0
-    min_points_for_classification: 15.0
     eps: 0.8
     eps_reclustering: 0.15
 
   autocross:
-    height_filter: 1.9
-    min_points: 4
-    max_points: 480
-    classification_distance_threshold: 18.0
-    min_points_for_classification: 14.0
     eps: 0.7
     eps_reclustering: 0.12
