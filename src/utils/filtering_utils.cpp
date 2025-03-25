@@ -3,8 +3,8 @@
 // Define tunable constants for the rectangular region
 const float X_MIN = -15.;  // Minimum x-coordinate
 const float X_MAX = 0.5;   // Maximum x-coordinate
-const float Y_MIN = -3;  // Minimum y-coordinate //-5
-const float Y_MAX = 3;   // Maximum y-coordinate //5
+const float Y_MIN = -15;  // Minimum y-coordinate //-5
+const float Y_MAX = 15;   // Maximum y-coordinate //5
 
 // Car bounding box
 const float CAR_X_MIN = -0.5; //front

@@ -224,8 +224,9 @@ private:
         cone_array_msg.header = msg->header;  // Use the same header as the PointCloud2 message
         cone_array_msg.header.frame_id = "os_lidar"; // Reference frame
 
-       
-        /*-------------------------------------------------*/
+        
+
+        /*--------------------TIMESTAMPS SYNC-----------------*/
          /*
          * this section is done to 
          * make coherent timestamps to give
