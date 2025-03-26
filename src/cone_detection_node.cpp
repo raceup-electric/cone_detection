@@ -28,11 +28,6 @@
 
 
 
-//CONSTANTS
-
-// LiDAR positioning with respect to the ground
-const float LIDAR_HEIGHT = 0.97;
-
 // Cone size constraints for RVIZ2 Markers
 const float MARKER_SMALL_CONE_HEIGHT = cone_detection::SMALL_CONE_HEIGHT;
 const float MARKER_SMALL_CONE_RADIUS = cone_detection::SMALL_CONE_BASE_RADIUS;
@@ -50,8 +45,6 @@ public:
         // Construct the relative path to the mission config file
         std::string config_path = package_share_dir + "/config/missions.yaml";
 
-        MissionConfig mission_config(config_path);
-
         // Get the mission type
         std::string mission = this->declare_parameter<std::string>("mission", "trackdrive");
 
@@ -63,23 +56,12 @@ public:
             RCLCPP_INFO(this->get_logger(), "Selected mission: %s", mission.c_str());
         }
         
+        mission_config.loadConfig(config_path, mission);
 
 
+        //RCLCPP_INFO(this->get_logger(), "Mission: %s | HEIGHT_FILTER: %f | MIN_POINTS: %d | MAX_POINTS: %d | classification_distance_threshold: %f | min_points_for_classification: %d | EPS: %f | EPS_reclustering: %f",
+        //            mission.c_str(), mission_config.height_filter, mission_config.min_points, mission_config.max_points, mission_config.classification_distance_threshold, mission_config.min_points_for_classification, mission_config.eps, mission_config.eps_reclustering);
 
-        HEIGHT_FILTER = mission_config.getFloatParam(mission, "height_filter", 2.0);
-        MIN_POINTS = mission_config.getIntParam(mission, "min_points", 2);
-        MAX_POINTS = mission_config.getIntParam(mission, "max_points", 500);
-        classification_distance_threshold = mission_config.getFloatParam(mission, "classification_distance_threshold", 15.0);
-        min_points_for_classification = mission_config.getIntParam(mission, "min_points_for_classification", 15);
-        EPS = mission_config.getFloatParam(mission, "eps", 0.8);
-        EPS_subClustering = mission_config.getFloatParam(mission, "eps_reclustering", 0.15);
-
-        //RCLCPP_INFO(this->get_logger(), "Mission: %s | HEIGHT_FILTER: %f | MIN_POINTS: %d | MAX_POINTS: %d | classification_distance_threshold: %f | min_points_for_classification: %f | EPS: %f | EPS_reclustering: %f",
-        //            mission.c_str(), HEIGHT_FILTER, MIN_POINTS, MAX_POINTS, classification_distance_threshold, min_points_for_classification, EPS, EPS_subClustering);
-
-        MAX_HEIGHT_THRESHOLD = HEIGHT_FILTER - LIDAR_HEIGHT;
-
-    
 
         pointcloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
                 "/ouster/points", 10,
@@ -106,7 +88,7 @@ private:
 
         // Filter out points based on their coordinates
         pcl::PointCloud<pcl::PointXYZI> filtered_cloud;
-        restrictedFOVFiltering(pcl_cloud, filtered_cloud, MAX_HEIGHT_THRESHOLD);
+        restrictedFOVFiltering(pcl_cloud, filtered_cloud, mission_config);
 
 
         //This is an optional publisher to see the field of view that is kept
@@ -122,7 +104,7 @@ private:
 
         // Cluster the remaining points
         std::vector<pcl::PointCloud<pcl::PointXYZI>> cone_clusters;
-        performDBSCANClustering(ground_removed_cloud, cone_clusters, MIN_POINTS, MAX_POINTS, EPS, EPS_subClustering);
+        performDBSCANClustering(ground_removed_cloud, cone_clusters, mission_config.min_points, mission_config.max_points, mission_config.eps, mission_config.eps_reclustering);
 
         // Classify clusters and store classified cones
         std::vector<pcl::PointCloud<pcl::PointXYZI>> classified_cones;
@@ -133,7 +115,7 @@ private:
         std::vector<eufs_msgs::msg::ConeWithCovariance> unknown_color_cones;
 
         for (auto& cluster : cone_clusters) {
-            if (cluster.points.size() >= MIN_POINTS && cluster.points.size() <= MAX_POINTS) {
+            if (cluster.points.size() >= mission_config.min_points && cluster.points.size() <= mission_config.max_points) {
             
                 // Calculate centroid for cone position
                 Eigen::Vector4f centroid(0, 0, 0, 0);
@@ -157,7 +139,8 @@ private:
 
                 // Only keep clusters within point count range
                 cone_detection::ConeType cone_type; //= classifyCone(cluster);
-                if(centroid.norm() <= classification_distance_threshold && cluster.points.size() > min_points_for_classification){
+                if(centroid.norm() <= mission_config.classification_distance_threshold &&
+                    cluster.points.size() > mission_config.min_points_for_classification){
                     cone_type = classifyCone(cluster);
                 }
                 else{
@@ -247,7 +230,8 @@ private:
 
             cone_detection::ConeType cone_type; //= classifyCone(cluster);      
             // Only keep clusters within point count range
-            if(centroid.norm() <= classification_distance_threshold && cluster.points.size() > min_points_for_classification){
+            if(centroid.norm() <= mission_config.classification_distance_threshold &&
+                cluster.points.size() > mission_config.min_points_for_classification){
                 cone_type = classifyCone(cluster);
             }
             else{
@@ -346,14 +330,7 @@ private:
         }
     }
 
-    float HEIGHT_FILTER;
-    int MIN_POINTS;
-    int MAX_POINTS; 
-    float classification_distance_threshold; 
-    int min_points_for_classification; 
-    float EPS; 
-    float EPS_subClustering; 
-    float MAX_HEIGHT_THRESHOLD; 
+    MissionConfig mission_config;
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_subscriber_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cone_publisher_;

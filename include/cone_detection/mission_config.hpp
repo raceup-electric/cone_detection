@@ -4,59 +4,54 @@
 #include <rclcpp/rclcpp.hpp>
 #include <yaml-cpp/yaml.h>
 #include <string>
-#include <unordered_map>
+#include <stdexcept>
 
 class MissionConfig {
 public:
+    int min_points;
+    int max_points;
+    int min_points_for_classification;
+    float height_filter;
+    float classification_distance_threshold;
+    float eps;
+    float eps_reclustering;
+    float car_x_min;
+    float car_x_max;
+    float car_y_min;
+    float car_y_max;
+    float fov_x_min;
+    float fov_x_max;
+    float fov_y_min;
+    float fov_y_max;
 
-    MissionConfig(const std::string &config_file) {
-        loadConfig(config_file);
+    MissionConfig() = default;
+    MissionConfig(const std::string &config_file, const std::string &mission = "") {
+        loadConfig(config_file, mission);
     }
 
-    bool loadConfig(const std::string &config_file) {
+    bool loadConfig(const std::string &config_file, const std::string &mission = "") {
         try {
             YAML::Node config = YAML::LoadFile(config_file);
-            if (!config["missions"]) {
-                throw std::runtime_error("Missing 'missions' key in config file.");
+            if (!config) {
+                throw std::runtime_error("Invalid config file.");
             }
 
-            // List of parameters and respective types
-            const std::unordered_map<std::string, std::string> parameters = {
-                {"min_points", "int"},
-                {"max_points", "int"},
-                {"min_points_for_classification", "int"},
-                {"height_filter", "float"},
-                {"classification_distance_threshold", "float"},
-                {"eps", "float"},
-                {"eps_reclustering", "float"},
-                {"car_x_min", "float"},
-                {"car_x_max", "float"},
-                {"car_y_min", "float"},
-                {"car_y_max", "float"},
-                {"fov_x_min", "float"},
-                {"fov_x_max", "float"},
-                {"fov_y_min", "float"},
-                {"fov_y_max", "float"}
-            };
+            loadParameter(config, mission, "min_points", min_points);
+            loadParameter(config, mission, "max_points", max_points);
+            loadParameter(config, mission, "min_points_for_classification", min_points_for_classification);
+            loadParameter(config, mission, "height_filter", height_filter);
+            loadParameter(config, mission, "classification_distance_threshold", classification_distance_threshold);
+            loadParameter(config, mission, "eps", eps);
+            loadParameter(config, mission, "eps_reclustering", eps_reclustering);
+            loadParameter(config, mission, "car_x_min", car_x_min);
+            loadParameter(config, mission, "car_x_max", car_x_max);
+            loadParameter(config, mission, "car_y_min", car_y_min);
+            loadParameter(config, mission, "car_y_max", car_y_max);
+            loadParameter(config, mission, "fov_x_min", fov_x_min);
+            loadParameter(config, mission, "fov_x_max", fov_x_max);
+            loadParameter(config, mission, "fov_y_min", fov_y_min);
+            loadParameter(config, mission, "fov_y_max", fov_y_max);
 
-            // Load default parameters
-            for (const auto& [parameter, type] : parameters) {
-                if (!config[parameter]) {
-                    throw std::runtime_error("Missing '" + parameter + "' key in config file.");
-                }
-                default_parameters_[parameter] = getParameterValue(config[parameter], type);
-            }
-
-            // Load mission-specific parameters
-            for (const auto &mission : config["missions"]) {
-                std::string name = mission.first.as<std::string>();
-                for (const auto& [parameter, type] : parameters) {
-                    if (mission.second[parameter]) {
-                        mission_parameters_[name][parameter] = getParameterValue(mission.second[parameter], type);
-                    }
-                }
-            }
-           
             return true;
         } catch (const std::exception &e) {
             RCLCPP_ERROR(rclcpp::get_logger("MissionConfig"), "Failed to load config: %s", e.what());
@@ -64,38 +59,16 @@ public:
         }
     }
 
-    float getFloatParam(const std::string &mission, const std::string &param, float default_value = 0.0) {
-        if (mission_parameters_.count(mission) && mission_parameters_[mission].count(param)) {
-            return std::get<float>(mission_parameters_[mission][param]);
-        }
-        if (default_parameters_.count(param)) {
-            return std::get<float>(default_parameters_[param]);
-        }
-        return default_value;
-    }
-
-    int getIntParam(const std::string &mission, const std::string &param, int default_value = 0) {
-        if (mission_parameters_.count(mission) && mission_parameters_[mission].count(param)) {
-            return std::get<int>(mission_parameters_[mission][param]);
-        }
-        if (default_parameters_.count(param)) {
-            return std::get<int>(default_parameters_[param]);
-        }
-        return default_value;
-    }
-
 private:
-    std::unordered_map<std::string, std::unordered_map<std::string, std::variant<int, float>>> mission_parameters_;
-    std::unordered_map<std::string, std::variant<int, float>> default_parameters_;
-
-    std::variant<int, float> getParameterValue(const YAML::Node& node, const std::string& type) {
-        if (type == "float") {
-            return node.as<float>();
-        } 
-        if (type == "int") {
-            return node.as<int>();
+    template <typename T>
+    void loadParameter(const YAML::Node &config, const std::string &mission, const std::string &key, T &parameter) {
+        if (!mission.empty() && config["missions"] && config["missions"][mission] && config["missions"][mission][key]) {
+            parameter = config["missions"][mission][key].as<T>();
+        } else if (config[key]) {
+            parameter = config[key].as<T>();
+        } else {
+            throw std::runtime_error("Missing '" + key + "' key in config file.");
         }
-        throw std::runtime_error("Invalid parameter type: " + type);
     }
 };
 

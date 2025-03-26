@@ -2,6 +2,7 @@
 #define FILTERING_UTILS_HPP
 
 #include "cone_detection/cone_type.hpp"
+#include "cone_detection/mission_config.hpp"
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
@@ -22,6 +23,6 @@
 
 void restrictedFOVFiltering(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
                             pcl::PointCloud<pcl::PointXYZI>& output_cloud,
-                            float max_height);
+                            MissionConfig config);
                     
 #endif  
