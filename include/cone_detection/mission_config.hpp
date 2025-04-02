@@ -23,6 +23,8 @@ public:
     float fov_x_max;
     float fov_y_min;
     float fov_y_max;
+    float detection_fov_border;
+    float detection_max_height;
 
     MissionConfig() = default;
     MissionConfig(const std::string &config_file, const std::string &mission = "") {
@@ -51,6 +53,8 @@ public:
             loadParameter(config, mission, "fov_x_max", fov_x_max);
             loadParameter(config, mission, "fov_y_min", fov_y_min);
             loadParameter(config, mission, "fov_y_max", fov_y_max);
+            loadParameter(config, mission, "detection_fov_border", detection_fov_border);
+            loadParameter(config, mission, "detection_max_height", detection_max_height);
 
             return true;
         } catch (const std::exception &e) {

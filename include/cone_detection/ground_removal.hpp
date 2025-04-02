@@ -17,7 +17,8 @@
 #include <pcl/filters/voxel_grid.h>
 
 void removeGroundRANSAC(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
-                            pcl::PointCloud<pcl::PointXYZI>& non_ground_cloud);
+                            pcl::PointCloud<pcl::PointXYZI>& non_ground_cloud,
+                            pcl::ModelCoefficients& coefficients);
 
 
 #endif  

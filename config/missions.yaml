@@ -1,20 +1,23 @@
-height_filter: 1.5
-min_points: 5
+height_filter: 1
+min_points: 3
 max_points: 1000
 classification_distance_threshold: 10.0
 min_points_for_classification: 10
 eps: 0.6
 eps_reclustering: 0.1
 
-car_x_min: 0.0
-car_x_max: 3.0
+car_x_min: -2.0
+car_x_max: 0.3
 car_y_min: -0.75
 car_y_max: 0.75
 
-fov_x_min: -1
+fov_x_min: -0.5
 fov_x_max: 20
-fov_y_min: -5
-fov_y_max: 5
+fov_y_min: -7
+fov_y_max: 7
+
+detection_fov_border: 0.3
+detection_max_height: 0.4
 
 missions:
   acceleration:

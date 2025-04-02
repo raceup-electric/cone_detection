@@ -4,7 +4,8 @@ const float DISTANCE_THRESHOLD = 0.05;       // RANSAC distance threshold for gr
 const int NUM_ITERATIONS = 10;             // RANSAC number of iterations
 
 void removeGroundRANSAC(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
-                        pcl::PointCloud<pcl::PointXYZI>& non_ground_cloud) {
+                        pcl::PointCloud<pcl::PointXYZI>& non_ground_cloud,
+                        pcl::ModelCoefficients& coefficients) {
 
     // Apply voxel grid downsampling to reduce the number of points
     pcl::VoxelGrid<pcl::PointXYZI> voxel_filter;
@@ -19,9 +20,8 @@ void removeGroundRANSAC(const pcl::PointCloud<pcl::PointXYZI>& input_cloud,
     seg.setMaxIterations(NUM_ITERATIONS);
 
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
-    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients());
     seg.setInputCloud(input_cloud.makeShared());
-    seg.segment(*inliers, *coefficients);
+    seg.segment(*inliers, coefficients);
 
     if (inliers->indices.empty()) {
         non_ground_cloud = input_cloud;  // No segmentation, return all points

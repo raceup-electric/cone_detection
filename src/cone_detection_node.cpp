@@ -100,7 +100,11 @@ private:
 
         // Separate ground and non-ground points using RANSAC
         pcl::PointCloud<pcl::PointXYZI> ground_removed_cloud;
-        removeGroundRANSAC(filtered_cloud, ground_removed_cloud);
+        pcl::ModelCoefficients ground_coefficients;
+        removeGroundRANSAC(filtered_cloud, ground_removed_cloud, ground_coefficients);
+        
+        float lidar_height = ground_coefficients.values[3];
+        //RCLCPP_INFO(this->get_logger(), "Lidar height: %f", lidar_height);
 
         // Cluster the remaining points
         std::vector<pcl::PointCloud<pcl::PointXYZI>> cone_clusters;
@@ -125,6 +129,19 @@ private:
                     centroid[2] += point.z;
                 }
                 centroid /= cluster.points.size();
+
+                // Too close to the border, exclude cluster
+                if (centroid[0] < mission_config.fov_x_min + mission_config.detection_fov_border ||
+                    centroid[0] > mission_config.fov_x_max - mission_config.detection_fov_border ||
+                    centroid[1] < mission_config.fov_y_min + mission_config.detection_fov_border ||
+                    centroid[1] > mission_config.fov_y_max - mission_config.detection_fov_border ) {
+                    continue;
+                }
+
+                // Too far from the ground, exclude cluster
+                if(centroid[2] + lidar_height > mission_config.detection_max_height) {
+                    continue;
+                }
 
                 // Create a ConeWithCovariance message
                 eufs_msgs::msg::ConeWithCovariance cone_msg;
