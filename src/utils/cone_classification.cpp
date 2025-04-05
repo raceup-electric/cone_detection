@@ -1,6 +1,6 @@
 #include "cone_detection/cone_classification.hpp"
 
-const float WHITE_STRIPE_INTENSITY_THRESHOLD = 2000.0f;  // Intensity threshold for white stripe detection
+const float INTENSITY_THRESHOLD_RATIO = 0.80f;  // Intensity threshold for white stripe detection
 
 cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& cluster) {
     // Calculate cone dimensions (height, radius)
@@ -40,9 +40,10 @@ cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& clu
 
     // Focus on the middle section for intensity analysis
     float avg_intensity_middle = calculateAverageIntensity(middle_points);
+    float avg_intensity_bottom = calculateAverageIntensity(bottom_points);
 
     // Classify the cone based on the middle section's intensity
-    if (avg_intensity_middle > WHITE_STRIPE_INTENSITY_THRESHOLD) {
+    if (avg_intensity_middle > avg_intensity_bottom * INTENSITY_THRESHOLD_RATIO) {
         return cone_detection::ConeType::BLUE;  // blue cone with a white stripe 
     } else {
         return cone_detection::ConeType::YELLOW;  // Yellow cone with a black stripe 
