@@ -14,7 +14,7 @@ namespace cone_detection {
     // Cone size constraints
   const float SMALL_CONE_HEIGHT = 0.325;
   const float BIG_CONE_HEIGHT = 0.505;
-  const float DIM_THRESHOLD = 0.1;
+  const float DIM_THRESHOLD = 0.13;
   
   const float SMALL_CONE_MIN_HEIGHT = SMALL_CONE_HEIGHT - DIM_THRESHOLD;
   const float SMALL_CONE_MAX_HEIGHT = SMALL_CONE_HEIGHT + DIM_THRESHOLD;

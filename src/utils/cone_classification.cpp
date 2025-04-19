@@ -8,7 +8,7 @@ cone_detection::ConeType classifyCone(const pcl::PointCloud<pcl::PointXYZI>& clu
     float base_radius = calculateBaseRadius(cluster);
 
     // First, classify by size (big orange)
-    if (height > cone_detection::BIG_CONE_MIN_HEIGHT && height < cone_detection::BIG_CONE_MAX_HEIGHT) {
+    if (height > cone_detection::BIG_CONE_MIN_HEIGHT) {
         return cone_detection::ConeType::BIG_ORANGE;  // Big orange cone based on size
     }
 
