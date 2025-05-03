@@ -48,6 +48,6 @@ def generate_launch_description():
             name='rviz2',
             output='screen',
             arguments=['-d', LaunchConfiguration('rviz_config')],
-            parameters=[{'fixed_frame': 'os_lidar'}]  # Set the default fixed frame
+            parameters=[{'fixed_frame': 'os_sensor'}]  # Set the default fixed frame
         )
     ])
